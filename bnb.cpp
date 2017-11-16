@@ -65,11 +65,16 @@ void interrompe(int signum) {
 }
 int k_1(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s) {
 	int e, d, total = 0;
+	int total_p = 0;
 
-	if(solucao_parcial.size() == 0) {
+	for(int i = 0; i < solucao_parcial.size(); i++)
+		if(solucao_parcial != -1)
+			total_p += 1;
+
+	if(total_p == 0) {
 		return 0;
-	} else if (solucao_parcial.size() == 1) {
-		d = 0;
+	} else if (total_p == 1) {
+		return 0;
 	} else {
 		// for (int i = 0; i < )
 	}
@@ -79,7 +84,7 @@ int k_1(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s) {
 void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s) {
 	vector<int> melhor_solucao, limites_inf;
 	priority_queue<pair<int, dados_no>, vector<pair<int, dados_no> >, comparador> nos_ativos; /* min_heap */
-	int limite_sup = 0, qtd_filhos, total_lim_inf = 0;
+	int limite_sup = 1000000, qtd_filhos, total_lim_inf = 0, pos = 0;
 	pair<int, dados_no> no_aux;
 
 	no_aux.first = 0;
@@ -89,27 +94,36 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s) {
 	no_aux.second.nivel = 0;
 	no_aux.second.cena = -1;
 
+	melhor_solucao.resize(N);
+	for(int i = 0; i < solucao_parcial.size(); i++)
+		melhor_solucao[i] = -1;
+	// pos = melhor_solucao.size() - 1 - i
 	nos_ativos.push(no_aux);
-	// while(!nos_ativos.empty()){
-	// 	//pair<int, dados_no> no = nos_ativos.pop();
-	// 	// qtd_filhos = N - no.second.nivel;
-	// 	// total_lim_inf += k_1(custos, s);
+	while(!nos_ativos.empty()){
+		pair<int, dados_no> no = nos_ativos.top();
+		nos_ativos.pop();
+		qtd_filhos = N - no.second.nivel;
+		cout << qtd_filhos << endl;
+		for(i = 0; i < qtd_filhos; i++) {
+			total_lim_inf += k_1(custos, melhor_solucao, s);
+
+		}
 	// 	// total_lim_inf += k_2();
 	// 	// total_lim_inf += k_3();
 	// 	// total_lim_inf += k_4();
-	// 	// for(j = 0; j < qtd_filhos; j++) {
-	// 	// 	if (limite_inf <= limite_sup){
-	// 	//
-	// 	// 	} else {
-	// 	// 		if(no esta sendo explorado nao tem mais filho e solucao completa) {
+		for(j = 0; j < qtd_filhos; j++) {
+			if (limite_inf > limite_sup){
+
+			} else {
+	// 	// 		if(qtd_filhos == 1) {
 	// 	// 			limite_sup = limite inferior desse no;
 	// 	// 			atualiza_solucao(melhor_solucao);
 	// 	// 		} else {
 	// 	// 			nos_ativos.push(esse no);
 	// 	// 		}
 	// 	// 	}
-	// 	// }
-	// }
+		}
+	}
 }
 // -pai
 // -nivel
