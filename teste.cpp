@@ -49,6 +49,11 @@ void atualiza_solucao(const vector<int> &solucao, int custo) {
     escrevendo = 1;
     melhor_solucao = solucao;
     melhor_custo = custo;
+	for (int j = 0; j < melhor_solucao.size(); j++)
+        cout << melhor_solucao[j] << " ";
+    // A segunda linha contem o custo (apenas de dias de espera!)
+    cout << endl << melhor_custo << endl;
+	cout << "melhor custo " << melhor_custo << endl;
     escrevendo = 0;
     if (pare == 1) {
         // Se estava escrevendo a solucao quando recebeu o sinal,
@@ -67,39 +72,72 @@ void interrompe(int signum) {
         exit(0);
     }
 }
-int k_1(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
+int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
 	int e, d, total = 0, i, j, k, e_i = 0, d_i = 0;
-	int tamanho_e = 0;
-	vector<int> e_p, d_p, conjunto_ap;
+	int tamanho_e = 0, ambos, qtd_cenas_e, qtd_cenas_d, l_e, l_d;
+	vector<int> e_p, d_p, conjunto_ap, nao_ap;
 
+	/* se ha apenas um elemento na solucao parcial ou nao ha nenhum, entao nao tem como calcular o limitante com K1 nem K2 */
 	if(solucao_parcial.size() == 0 || solucao_parcial.size() == 1) {
 		return 0;
 	} else {
 		tamanho_e = solucao_parcial.size() / 2;
+		/* se tiver numero impar de elementos */
 		if (solucao_parcial.size() % 2 != 0) {
+			l_e = tamanho_e + 1;
+			l_d = cenas - tamanho_e + 1;
+			/* encontrando conjunto E(P) */
 			for (i = 0, j = 0; i <= tamanho_e; i++, j+=2) {
 				e_p.push_back(solucao_parcial[j]);
 			}
+			/* encontrando conjunto D(P) */
 			for(i = tamanho_e + 1, j = 1; i < solucao_parcial.size(); i++, j+=2) {
 				d_p.push_back(solucao_parcial[j]);
 			}
 
 		} else {
+			l_e = tamanho_e;
+			l_d = cenas - tamanho_e + 1;
+			/* encontrando conjunto E(P) */
 			for (i = 0, j = 0; i < tamanho_e; i++, j+=2) {
 				e_p.push_back(solucao_parcial[j]);
 			}
+			/* encontrando conjunto D(P) */
 			for(i = tamanho_e, j = 1; i < solucao_parcial.size(); i++, j+=2) {
 				d_p.push_back(solucao_parcial[j]);
 			}
 		}
+		/* Encontrando o conjunto A(P) e o conjunto de atores que nao pertecem a A(P) */
 		for(i = 0; i < atores; i++) {
+			ambos = 0;
+			qtd_cenas_e = 0;
+			qtd_cenas_d = 0;
 			for(j = 0; j < e_p.size(); j++) {
 				for(k = 0; k < d_p.size(); k++) {
-					if(t[i][e_p[j]-1] && t[i][d_p[k]-1])
-						conjunto_ap.push_back(i+1);
+					/* se tem um inicio em E(P) e tem um fim em D(P) */
+					if(t[i][e_p[j]-1] && t[i][d_p[k]-1]) {
+						ambos++;
+					/* se tem inicio e fim em E(P) */
+					} else if (t[i][e_p[j]-1]) {
+						qtd_cenas_e++;
+					/* se tem inicio e fim em D(P) */
+					} else if (t[i][d_p[k]-1]) {
+						qtd_cenas_d++;
+					}
 				}
 			}
+			/* se tem inicio em E(P) e fim em D(P) */
+			if (ambos > 0) {
+				conjunto_ap.push_back(i+1);
+			/* se todas as cenas ja foram gravadas em E(P) ou D(P) */
+			} else if (qtd_cenas_e == s[i] || qtd_cenas_d == s[i]) {
+				conjunto_ap.push_back(i+1);
+			/* se nao esta em A(P) */
+			} else {
+				nao_ap.push_back(i+1);
+			}
 		}
+
 		/* encontrando o primeiro dia de gravacao e o ultimo ou seja e_i e d_i */
 		for(i = 0; i < conjunto_ap.size(); i++) {
 			e_i = 0;
@@ -111,11 +149,77 @@ int k_1(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vecto
 				}
 			}
 			for(j = 0; j < d_p.size(); j++) {
-				if(t[conjunto_ap[i]-1][d_p[j]-1])
-					d_i = cenas - d_p.size() + j + 1;
+				if(t[conjunto_ap[i]-1][d_p[j]-1]) {
+					d_i = cenas - j;
+					break;
+				}
+			}
+			/* se o inicio e fim esta em D(P) */
+			if (e_i == 0) {
+				for(j = 0; j < d_p.size(); j++) {
+					if(t[conjunto_ap[i]-1][d_p[j]-1]) {
+						e_i = cenas - j;
+					}
+				}
+			/* se inicio e fim esta em E(P) */
+			} else if(d_i == 0) {
+				for(j = 0; j < e_p.size(); j++) {
+					if(t[conjunto_ap[i]-1][e_p[j]-1]) {
+						d_i = j + 1;
+					}
+				}
 			}
 			total += custos[conjunto_ap[i]-1] * (d_i - e_i + 1 - s[conjunto_ap[i]-1]);
 		}
+
+
+		/******* K2 *******/
+		// vector<int> b_e, b_d;
+		// for(i = 0; i < nao_ap.size(); i++) {
+		// 	for (j = 0; j < e_p.size(); j++) {
+		// 		if(t[nao_ap[i]-1][e_p[j]-1]) {
+		// 			b_e.push_back(nao_ap[i]);
+		// 			break;
+		// 		}
+		// 	}
+		// 	for (j = 0; j < d_p.size(); j++) {
+		// 		if(t[nao_ap[i]-1][d_p[j]-1]) {
+		// 			b_d.push_back(nao_ap[i]);
+		// 			break;
+		// 		}
+		// 	}
+		// }
+		// for(i = 0; i < nao_ap.size(); i++) {
+		// 	e_i = 0;
+		// 	d_i = 0;
+		// 	for(j = 0; j < e_p.size(); j++) {
+		// 		if(t[nao_ap[i]-1][e_p[j]-1]) {
+		// 			e_i = j + 1;
+		// 			break;
+		// 		}
+		// 	}
+		// 	for(j = 0; j < d_p.size(); j++) {
+		// 		if(t[nao_ap[i]-1][d_p[j]-1]) {
+		// 			d_i = cenas - j;
+		// 			break;
+		// 		}
+		// 	}
+		// }
+		//
+		// int esquerdo = 0, direito = 0;
+		// for(i = 0; i < b_e.size(); i++) {
+		// 	for(j = e_i; j <= l_e; j++) {
+		// 		esquerdo += 1 - t[b_e[i]-1][j-1];
+		// 	}
+		// 	total += custos[b_e[i]-1] * esquerdo;
+		// }
+		// for(i = 0; i < b_d.size(); i++) {
+		// 	for(j = d_i; j <= l_d; j++) {
+		// 		direito += 1 - t[b_d[i]-1][j-1];
+		// 	}
+		// 	total += custos[b_d[i]-1] * direito;
+		// }
+
 
 	}
 	return total;
@@ -139,9 +243,7 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 
 		pair<int, dados_no> no = nos_ativos.top();
 		nos_ativos.pop();
-		if(no.second.cena != 0) {
-			no.second.melhor_solucao.push_back(no.second.cena);
-		}
+
 		/* quantidade de filhos que o no no nivel i pode ter */
 		qtd_filhos = N - no.second.nivel;
 		//cout << qtd_filhos << endl;
@@ -150,11 +252,24 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 		if(limitante_sup == 1000000) {
 			/* se e um no folha da arvore */
 			if (qtd_filhos == 0) {
-				cout << "etrei" << endl;
-				//total_lim_inf += k_1(custos, no.second.melhor_solucao, s, t, atores, cenas);
+				// cout << "etrei" << endl;
+				vector<int> resposta;
+
+				for (int j = 0; j < no.second.melhor_solucao.size(); j++)
+					cout << no.second.melhor_solucao[j] << " ";
+				cout << '\n';
+
+				for(i = 0; i < no.second.melhor_solucao.size(); i+= 2) {
+					resposta.push_back(no.second.melhor_solucao[i]);
+				}
+				for(i = no.second.melhor_solucao.size() -1; i > 0; i -= 2) {
+					resposta.push_back(no.second.melhor_solucao[i]);
+				}
+
 				limitante_sup = no.first;
-				//cout << " Achei limitante_sup " << limitante_sup << endl;
-				atualiza_solucao(no.second.melhor_solucao, no.first);
+
+				cout << " Achei limitante_sup " << limitante_sup << endl;
+				atualiza_solucao(resposta, no.first);
 			} else {
 				/* gera os filhos */
 				for(i = 0; i < N; i++) {
@@ -162,18 +277,12 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 
 					/* se for possivel gerar o filho */
 					if(no.second.cenas_disponiveis[i]) {
-						vector<int> tmp(no.second.melhor_solucao);
-						tmp.push_back(i+1);
-						/*calcula limitante inferior para o no filho */
-						total_lim_inf += k_1(custos, tmp, s, t, atores, cenas);
+						no_aux.second.melhor_solucao = no.second.melhor_solucao;
+						no_aux.second.melhor_solucao.push_back(i+1);
+						total_lim_inf += limitantes(custos, no_aux.second.melhor_solucao, s, t, atores, cenas);
 						no_aux.first = total_lim_inf;
 						no_aux.second.nivel = no.second.nivel + 1;
 						no_aux.second.cena = i+1;
-						// no_aux.second.melhor_solucao.resize(N, 0)
-						/* atualiza melhor solucao do filho */
-						for(j = 0; j < no.second.melhor_solucao.size(); j++) {
-							no_aux.second.melhor_solucao.push_back(no.second.melhor_solucao[j]);
-						}
 						no_aux.second.cenas_disponiveis.resize(N);
 						for(j = 0; j < no.second.cenas_disponiveis.size(); j++) {
 							if (i != j) {
@@ -191,27 +300,29 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 			}
 		} else {
 			if (qtd_filhos == 0) {
-				//total_lim_inf += k_1(custos, no.second.melhor_solucao, s, t, atores, cenas);
+				vector<int> resposta;
+				for(i = 0; i < no.second.melhor_solucao.size(); i+= 2) {
+					resposta.push_back(no.second.melhor_solucao[i]);
+				}
+				for(i = no.second.melhor_solucao.size() ; i > 0; i -= 2) {
+					resposta.push_back(no.second.melhor_solucao[i]);
+				}
 				cout << "limt inf " << no.first << " sup " << limitante_sup << endl;
 					if (no.first < melhor_custo) {
 						limitante_sup = no.first;
-						atualiza_solucao(no.second.melhor_solucao, no.first);
+						atualiza_solucao(resposta, no.first);
 					}
 			} else {
 				for(i = 0; i < N; i++) {
 					total_lim_inf = 0;
 					if(no.second.cenas_disponiveis[i]) {
-						vector<int> tmp(no.second.melhor_solucao);
-						tmp.push_back(i+1);
-						total_lim_inf += k_1(custos, tmp, s, t, atores, cenas);
+						no_aux.second.melhor_solucao = no.second.melhor_solucao;
+						no_aux.second.melhor_solucao.push_back(i+1);
+						total_lim_inf += limitantes(custos, no_aux.second.melhor_solucao, s, t, atores, cenas);
 						if (total_lim_inf < melhor_custo) {
 							no_aux.first = total_lim_inf;
 							no_aux.second.nivel = no.second.nivel + 1;
 							no_aux.second.cena = i+1;
-							// no_aux.second.melhor_solucao.resize(N, 0);
-							for(j = 0; j < no.second.melhor_solucao.size(); j++) {
-								no_aux.second.melhor_solucao.push_back(no.second.melhor_solucao[j]);
-							}
 							no_aux.second.cenas_disponiveis.resize(N);
 							for(j = 0; j < no.second.cenas_disponiveis.size(); j++) {
 								if (i != j) {
@@ -220,23 +331,16 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 									no_aux.second.cenas_disponiveis[j] = false;
 								}
 							}
-
 							nos_ativos.push(no_aux);
 							no_aux.second.melhor_solucao.clear();
 							no_aux.second.melhor_solucao.resize(0);
+
 						}
 
 					}
 				}
-
 			}
-
-
-
-	// 	// total_lim_inf += k_2();
-	// 	// total_lim_inf += k_3();
-	// 	// total_lim_inf += k_4();
-		 }
+		}
 	}
 }
 
@@ -289,14 +393,11 @@ int main(int argc, char *argv[]) {
 			s[i] += t[i][j];
 		}
 	}
-
+	for (i = 0; i < atores; i++) {
+		cout << "s " << s[i] << "c " << custos[i] << endl;
+	}
 	b_n_b(0, cenas, custos, s, t, atores, cenas);
 	imprime_saida();
-
-	// return melhor_solucao;
-    // Continue sua implementacao aqui. Sempre que encontrar uma nova
-    // solucao, utilize a funcao atualiza_solucao para atualizar as
-    // variaveis globais.
 
     return 0;
 }
