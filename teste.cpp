@@ -6,7 +6,7 @@
 #include <queue>
 #include <utility>
 #include <string>
-//oi
+
 using namespace std;
 
 // Flags para controlar a interrupcao por tempo
@@ -29,8 +29,12 @@ typedef struct dados_no {
 
 struct comparador {
      bool operator()(pair<int, dados_no> i, pair<int, dados_no> j) {
+         if (i.second.nivel < j.second.nivel) {
+             return true;
+         } else if (i.second.nivel > j.second.nivel) {
+            return false;
+         }
 		 return i.first > j.first;
-    //  return i.second.nivel < j.second.nivel && i.first > j.first;
     }
 };
 
@@ -74,9 +78,10 @@ void interrompe(int signum) {
 }
 int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
 	int e, d, total = 0, i, j, k, e_i = 0, d_i = 0;
-	int tamanho_e = 0, ambos, qtd_cenas_e, qtd_cenas_d, l_e, l_d;
+	int tamanho_e = 0, qtd_cenas_e, qtd_cenas_d, l_e, l_d;
 	vector<int> e_p, d_p, conjunto_ap, nao_ap;
 
+    
 	/* se ha apenas um elemento na solucao parcial ou nao ha nenhum, entao nao tem como calcular o limitante com K1 nem K2 */
 	if(solucao_parcial.size() == 0 || solucao_parcial.size() == 1) {
 		return 0;
@@ -109,25 +114,23 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 		}
 		/* Encontrando o conjunto A(P) e o conjunto de atores que nao pertecem a A(P) */
 		for(i = 0; i < atores; i++) {
-			ambos = 0;
 			qtd_cenas_e = 0;
 			qtd_cenas_d = 0;
-			for(j = 0; j < e_p.size(); j++) {
-				for(k = 0; k < d_p.size(); k++) {
-					/* se tem um inicio em E(P) e tem um fim em D(P) */
-					if(t[i][e_p[j]-1] && t[i][d_p[k]-1]) {
-						ambos++;
-					/* se tem inicio e fim em E(P) */
-					} else if (t[i][e_p[j]-1]) {
-						qtd_cenas_e++;
-					/* se tem inicio e fim em D(P) */
-					} else if (t[i][d_p[k]-1]) {
-						qtd_cenas_d++;
-					}
-				}
-			}
+            
+            for(j = 0; j < e_p.size(); j++) {
+                if (t[i][e_p[j]-1]) {
+                    qtd_cenas_e++;
+                }
+            }
+            
+            for(k = 0; k < d_p.size(); k++) {
+                if (t[i][d_p[k]-1]) {
+                    qtd_cenas_d++;
+                }   
+            }
+            
 			/* se tem inicio em E(P) e fim em D(P) */
-			if (ambos > 0) {
+			if ((qtd_cenas_e > 0) && (qtd_cenas_d > 0)) {
 				conjunto_ap.push_back(i+1);
 			/* se todas as cenas ja foram gravadas em E(P) ou D(P) */
 			} else if (qtd_cenas_e == s[i] || qtd_cenas_d == s[i]) {
@@ -137,8 +140,7 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 				nao_ap.push_back(i+1);
 			}
 		}
-
-		/* encontrando o primeiro dia de gravacao e o ultimo ou seja e_i e d_i */
+		/* encontrando o primeiro dia de gravacao e o ultimo */
 		for(i = 0; i < conjunto_ap.size(); i++) {
 			e_i = 0;
 			d_i = 0;
@@ -156,22 +158,30 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 			}
 			/* se o inicio e fim esta em D(P) */
 			if (e_i == 0) {
-				for(j = 0; j < d_p.size(); j++) {
+				for(j = d_p.size() - 1; j >= 0; j--) {
 					if(t[conjunto_ap[i]-1][d_p[j]-1]) {
 						e_i = cenas - j;
+                        break;
 					}
 				}
 			/* se inicio e fim esta em E(P) */
 			} else if(d_i == 0) {
-				for(j = 0; j < e_p.size(); j++) {
+				for(j = e_p.size() - 1; j >= 0; j--) {
 					if(t[conjunto_ap[i]-1][e_p[j]-1]) {
 						d_i = j + 1;
+                        break;
 					}
 				}
 			}
+			
+			if (solucao_parcial.size() >= 3) {
+                cout << endl;
+            }
+			
 			total += custos[conjunto_ap[i]-1] * (d_i - e_i + 1 - s[conjunto_ap[i]-1]);
 		}
-
+        
+        cout << "K1 = " << total << endl;
 
 		/******* K2 *******/
 		// vector<int> b_e, b_d;
@@ -255,9 +265,9 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 				// cout << "etrei" << endl;
 				vector<int> resposta;
 
-				for (int j = 0; j < no.second.melhor_solucao.size(); j++)
-					cout << no.second.melhor_solucao[j] << " ";
-				cout << '\n';
+				//for (int j = 0; j < no.second.melhor_solucao.size(); j++)
+				//	cout << no.second.melhor_solucao[j] << " ";
+				//cout << '\n';
 
 				for(i = 0; i < no.second.melhor_solucao.size(); i+= 2) {
 					resposta.push_back(no.second.melhor_solucao[i]);
