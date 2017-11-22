@@ -41,12 +41,17 @@ struct comparador {
 void imprime_saida() {
     // Lembre-se: a primeira linha da saida deve conter n inteiros,
     // tais que o j-esimo inteiro indica o dia de gravacao da cena j!
-    for (int j = 0; j < melhor_solucao.size(); j++)
-        cout << melhor_solucao[j] << " ";
     // A segunda linha contem o custo (apenas de dias de espera!)
+    vector<int> rFinal;
+    rFinal.resize (melhor_solucao.size());
+    for (int j = 0; j < melhor_solucao.size(); j++) {
+        rFinal[melhor_solucao[j] - 1] = j + 1;
+    }
+    for (int j = 0; j < rFinal.size(); j++)
+        cout << rFinal[j] << " ";
     cout << endl << melhor_custo << endl;
-	cout << melhor_limitante_inf << endl;
-	cout << nos_explorados << endl;
+    cout << melhor_limitante_inf << endl;
+    cout << nos_explorados << endl;
 }
 
 void atualiza_solucao(const vector<int> &solucao, int custo) {
@@ -76,11 +81,61 @@ void interrompe(int signum) {
         exit(0);
     }
 }
+
+void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int cenas, vector<int>& atores, vector<int>& pacote) {
+    vector<int> cena_pendente;
+    cena_pendente.resize(cenas);
+    vector<int> l_cenas;
+    vector<int> c_cenas;
+    
+    for (int i = 0; i < cenas; i++) {
+        cena_pendente[i] = 1;
+    }
+    for (int i = 0; i < solucao_parcial.size(); i++) {
+        cena_pendente[solucao_parcial[i] - 1] = 0;
+    }
+    for (int i = 0; i < cenas; i++) {
+        if(cena_pendente[i] == 1)
+            l_cenas.push_back(i + 1);
+    }
+    c_cenas.resize(l_cenas.size());
+    
+    for (int i = 0; i < l_cenas.size(); i++) {
+        c_cenas[i] = 0;
+        for(int j = 0; j < atores.size(); j++) {
+            c_cenas[i] += t[atores[j] - 1][l_cenas[i] - 1];
+        }
+    }
+    
+    cout << endl;
+    
+    for (int k = 0; k < l_cenas.size(); k++) {
+        int menor = k;
+        for(int i = k+1; i < l_cenas.size(); i++) {
+            if (c_cenas[i] < c_cenas[menor]) {
+                menor = i;
+            }
+        }
+        
+        if (menor != k) {
+            int aux = c_cenas[k];
+            c_cenas[k] = c_cenas[menor];
+            c_cenas[menor] = aux;
+            aux = l_cenas[k];
+            l_cenas[k] = l_cenas[menor];
+            l_cenas[menor] = aux;
+        }
+    }
+    
+    cout << endl;
+    
+}
+
 int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
 	int e, d, K1 = 0, K2 = 0, i, j, k, e_i = 0, d_i = 0;
 	int tamanho_e = 0, qtd_cenas_e, qtd_cenas_d, l_e, l_d;
 	vector<int> e_p, d_p, conjunto_ap, nao_ap;
-
+    nos_explorados++;
     
 	/* se ha apenas um elemento na solucao parcial ou nao ha nenhum, entao nao tem como calcular o limitante com K1 nem K2 */
 	if(solucao_parcial.size() == 0 || solucao_parcial.size() == 1) {
@@ -133,7 +188,7 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 			if ((qtd_cenas_e > 0) && (qtd_cenas_d > 0)) {
 				conjunto_ap.push_back(i+1);
 			/* se todas as cenas ja foram gravadas em E(P) ou D(P) */
-			} else if (qtd_cenas_e == s[i] || qtd_cenas_d == s[i]) {
+            } else if ( ( (qtd_cenas_e == s[i]) && (qtd_cenas_e > 0) ) || ( (qtd_cenas_d == s[i]) && (qtd_cenas_d > 0) ) ) {
 				conjunto_ap.push_back(i+1);
 			/* se nao esta em A(P) */
 			} else {
@@ -176,8 +231,10 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 			
 			K1 += custos[conjunto_ap[i]-1] * (d_i - e_i + 1 - s[conjunto_ap[i]-1]);
 		}
-        
-        //cout << "K1 = " << total << endl;
+		
+		if ((solucao_parcial[0] == 2) && (solucao_parcial[1] == 6) && (solucao_parcial[2] == 4) && (solucao_parcial[3] == 3)) {
+            cout << "K1 = " << K1 << endl;
+        }
 
 		/******* K2 *******/
 		vector<int> b_e, b_d;
@@ -233,12 +290,11 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
             
         }
         
-        if (K2 != 0) {
-            cout << endl;
+        /******* K3 *******/
+        if (b_e.size() > 1) {
+            vector<int> pacote1;
+            empacotamento (solucao_parcial, t, cenas, b_e, pacote1);
         }
-		 		
-		cout << "K2 = " << K2 << endl;
-
 
 	}
 	return K1 + K2;
@@ -262,7 +318,12 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 
 		pair<int, dados_no> no = nos_ativos.top();
 		nos_ativos.pop();
-
+        
+        while ((!nos_ativos.empty()) && (no.first >= limitante_sup)) {
+            no = nos_ativos.top();
+            nos_ativos.pop();
+        }
+        
 		/* quantidade de filhos que o no no nivel i pode ter */
 		qtd_filhos = N - no.second.nivel;
 		//cout << qtd_filhos << endl;
@@ -323,7 +384,7 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 				for(i = 0; i < no.second.melhor_solucao.size(); i+= 2) {
 					resposta.push_back(no.second.melhor_solucao[i]);
 				}
-				for(i = no.second.melhor_solucao.size() ; i > 0; i -= 2) {
+				for(i = no.second.melhor_solucao.size() - 1; i > 0; i -= 2) {
 					resposta.push_back(no.second.melhor_solucao[i]);
 				}
 				cout << "limt inf " << no.first << " sup " << limitante_sup << endl;
@@ -360,6 +421,9 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 				}
 			}
 		}
+		
+		//cout << endl;
+		
 	}
 }
 
