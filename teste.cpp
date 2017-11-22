@@ -77,7 +77,7 @@ void interrompe(int signum) {
     }
 }
 int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
-	int e, d, total = 0, i, j, k, e_i = 0, d_i = 0;
+	int e, d, K1 = 0, K2 = 0, i, j, k, e_i = 0, d_i = 0;
 	int tamanho_e = 0, qtd_cenas_e, qtd_cenas_d, l_e, l_d;
 	vector<int> e_p, d_p, conjunto_ap, nao_ap;
 
@@ -174,65 +174,74 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 				}
 			}
 			
-			if (solucao_parcial.size() >= 3) {
-                cout << endl;
-            }
-			
-			total += custos[conjunto_ap[i]-1] * (d_i - e_i + 1 - s[conjunto_ap[i]-1]);
+			K1 += custos[conjunto_ap[i]-1] * (d_i - e_i + 1 - s[conjunto_ap[i]-1]);
 		}
         
-        cout << "K1 = " << total << endl;
+        //cout << "K1 = " << total << endl;
 
 		/******* K2 *******/
-		// vector<int> b_e, b_d;
-		// for(i = 0; i < nao_ap.size(); i++) {
-		// 	for (j = 0; j < e_p.size(); j++) {
-		// 		if(t[nao_ap[i]-1][e_p[j]-1]) {
-		// 			b_e.push_back(nao_ap[i]);
-		// 			break;
-		// 		}
-		// 	}
-		// 	for (j = 0; j < d_p.size(); j++) {
-		// 		if(t[nao_ap[i]-1][d_p[j]-1]) {
-		// 			b_d.push_back(nao_ap[i]);
-		// 			break;
-		// 		}
-		// 	}
-		// }
-		// for(i = 0; i < nao_ap.size(); i++) {
-		// 	e_i = 0;
-		// 	d_i = 0;
-		// 	for(j = 0; j < e_p.size(); j++) {
-		// 		if(t[nao_ap[i]-1][e_p[j]-1]) {
-		// 			e_i = j + 1;
-		// 			break;
-		// 		}
-		// 	}
-		// 	for(j = 0; j < d_p.size(); j++) {
-		// 		if(t[nao_ap[i]-1][d_p[j]-1]) {
-		// 			d_i = cenas - j;
-		// 			break;
-		// 		}
-		// 	}
-		// }
-		//
-		// int esquerdo = 0, direito = 0;
-		// for(i = 0; i < b_e.size(); i++) {
-		// 	for(j = e_i; j <= l_e; j++) {
-		// 		esquerdo += 1 - t[b_e[i]-1][j-1];
-		// 	}
-		// 	total += custos[b_e[i]-1] * esquerdo;
-		// }
-		// for(i = 0; i < b_d.size(); i++) {
-		// 	for(j = d_i; j <= l_d; j++) {
-		// 		direito += 1 - t[b_d[i]-1][j-1];
-		// 	}
-		// 	total += custos[b_d[i]-1] * direito;
-		// }
+		vector<int> b_e, b_d;
+		// encontrando atores que podem participar de k2
+        for(i = 0; i < nao_ap.size(); i++) {
+		 	for (j = 0; j < e_p.size(); j++) {
+		 		if(t[nao_ap[i]-1][e_p[j]-1]) {
+		 			b_e.push_back(nao_ap[i]);
+		 			break;
+		 		}
+		 	}
+		 	for (j = 0; j < d_p.size(); j++) {
+		 		if(t[nao_ap[i]-1][d_p[j]-1]) {
+		 			b_d.push_back(nao_ap[i]);
+		 			break;
+		 		}
+		 	}
+		}
+		
+		for (i = 0; i < b_e.size(); i++) {
+            int flag = 0, esquerda = 0;
+            int ator = b_e[i] - 1;
+            
+            for (j = 0; j < e_p.size(); j++) {
+                if (t[ator][e_p[j] - 1]) {
+                    flag = j;
+                    break;
+                }
+            }
+
+            for (j = flag; j < e_p.size(); j++) {
+                esquerda += 1 - t[ator][e_p[j] - 1];
+            }
+            K2 += custos[ator] * esquerda;
+            
+        }
+        
+        for (i = 0; i < b_d.size(); i++) {
+            int flag = 0, direita = 0;
+            int ator = b_d[i] - 1;
+            
+            for (j = 0; j < d_p.size(); j++) {
+                if (t[ator][d_p[j] - 1]) {
+                    flag = j;
+                    break;
+                }
+            }
+            
+            for (j = flag; j < d_p.size(); j++) {
+                direita += 1 - t[ator][d_p[j] - 1];
+            }
+            K2 += custos[ator] * direita;
+            
+        }
+        
+        if (K2 != 0) {
+            cout << endl;
+        }
+		 		
+		cout << "K2 = " << K2 << endl;
 
 
 	}
-	return total;
+	return K1 + K2;
 
 }
 
@@ -380,7 +389,7 @@ int main(int argc, char *argv[]) {
 			j = 0;
 			for(i = 0; i < atores; i++) {
 				tmp.clear();
-				while(str[j] != ' ') {
+                while(str[j] != ' ' && str[j] != '\0') {
 					tmp = tmp + str[j];
 					j++;
 				}
