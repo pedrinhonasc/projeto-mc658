@@ -87,6 +87,12 @@ void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int c
     cena_pendente.resize(cenas);
     vector<int> l_cenas;
     vector<int> c_cenas;
+    vector<int> aOK;
+    aOK.resize(atores.size());
+    
+    for(int j = 0; j < aOK.size(); j++) {
+       aOK[j] = 0;
+    }
     
     for (int i = 0; i < cenas; i++) {
         cena_pendente[i] = 1;
@@ -107,8 +113,6 @@ void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int c
         }
     }
     
-    cout << endl;
-    
     for (int k = 0; k < l_cenas.size(); k++) {
         int menor = k;
         for(int i = k+1; i < l_cenas.size(); i++) {
@@ -127,8 +131,23 @@ void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int c
         }
     }
     
-    cout << endl;
-    
+    for(int i = 0; i < l_cenas.size(); i++) {
+        bool flag = true;
+        // checa se a cena pode ser escolhida
+        for (int j = 0; j < atores.size(); j++) {
+            cout << "seg passou de j = " << j << endl;
+            if (((aOK[j] == 1) && (t[atores[j] - 1][l_cenas[i] - 1] == 1)) || (c_cenas[i] == 0))    
+                flag = false;
+        }
+        // se pode escolha-a
+        if (flag) {
+            pacote.push_back(l_cenas[i]);
+            for (int j = 0; j < atores.size(); j++) {
+                if ((aOK[j] == 0) && (t[atores[j] - 1][l_cenas[i] - 1] == 1))
+                    aOK[j] = 1;
+            }
+        }
+    }  
 }
 
 int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
