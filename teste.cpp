@@ -58,11 +58,11 @@ void atualiza_solucao(const vector<int> &solucao, int custo) {
     escrevendo = 1;
     melhor_solucao = solucao;
     melhor_custo = custo;
-	for (int j = 0; j < melhor_solucao.size(); j++)
-        cout << melhor_solucao[j] << " ";
+	//for (int j = 0; j < melhor_solucao.size(); j++)
+        //cout << melhor_solucao[j] << " ";
     // A segunda linha contem o custo (apenas de dias de espera!)
-    cout << endl << melhor_custo << endl;
-	cout << "melhor custo " << melhor_custo << endl;
+    //cout << endl << melhor_custo << endl;
+	//cout << "melhor custo " << melhor_custo << endl;
     escrevendo = 0;
     if (pare == 1) {
         // Se estava escrevendo a solucao quando recebeu o sinal,
@@ -113,6 +113,7 @@ void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int c
         }
     }
     
+    // ordenando as cenas por ordem de custo
     for (int k = 0; k < l_cenas.size(); k++) {
         int menor = k;
         for(int i = k+1; i < l_cenas.size(); i++) {
@@ -135,7 +136,6 @@ void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int c
         bool flag = true;
         // checa se a cena pode ser escolhida
         for (int j = 0; j < atores.size(); j++) {
-            cout << "seg passou de j = " << j << endl;
             if (((aOK[j] == 1) && (t[atores[j] - 1][l_cenas[i] - 1] == 1)) || (c_cenas[i] == 0))    
                 flag = false;
         }
@@ -151,7 +151,7 @@ void empacotamento (vector<int>& solucao_parcial, vector<vector<int> >& t, int c
 }
 
 int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s, vector<vector<int> >& t, int atores, int cenas) {
-	int e, d, K1 = 0, K2 = 0, i, j, k, e_i = 0, d_i = 0;
+	int e, d, K1 = 0, K2 = 0, K3 = 0, K4 = 0, i, j, k, e_i = 0, d_i = 0;
 	int tamanho_e = 0, qtd_cenas_e, qtd_cenas_d, l_e, l_d;
 	vector<int> e_p, d_p, conjunto_ap, nao_ap;
     nos_explorados++;
@@ -250,10 +250,6 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
 			
 			K1 += custos[conjunto_ap[i]-1] * (d_i - e_i + 1 - s[conjunto_ap[i]-1]);
 		}
-		
-		if ((solucao_parcial[0] == 2) && (solucao_parcial[1] == 6) && (solucao_parcial[2] == 4) && (solucao_parcial[3] == 3)) {
-            cout << "K1 = " << K1 << endl;
-        }
 
 		/******* K2 *******/
 		vector<int> b_e, b_d;
@@ -313,10 +309,89 @@ int limitantes(vector<int>& custos, vector<int>& solucao_parcial, vector<int>& s
         if (b_e.size() > 1) {
             vector<int> pacote1;
             empacotamento (solucao_parcial, t, cenas, b_e, pacote1);
+           
+            if (pacote1.size() > 1) {
+                vector<int> custoCenas;
+                custoCenas.resize(pacote1.size());
+                
+                // calculando o custo das cenas
+                for (i = 0; i < custoCenas.size(); i++) {
+                    custoCenas[i] = 0;
+                    for(j = 0; j < b_e.size(); j++) {
+                        custoCenas[i] += custos[b_e[j] - 1] * t[b_e[j] - 1][pacote1[i] - 1];
+                    }
+                }
+                
+                for (int k = 0; k < custoCenas.size(); k++) {
+                    int menor = k;
+                    for(int i = k+1; i < custoCenas.size(); i++) {
+                        if (custoCenas[i] < custoCenas[menor]) {
+                            menor = i;
+                        }
+                    }
+                    
+                    if (menor != k) {
+                        int aux = custoCenas[k];
+                        custoCenas[k] = custoCenas[menor];
+                        custoCenas[menor] = aux;
+                        aux = pacote1[k];
+                        pacote1[k] = pacote1[menor];
+                        pacote1[menor] = aux;
+                    }
+                }
+                
+                for (int k = custoCenas.size() - 1; k >= 0; k--) {
+                    K3 += custoCenas[k] * (custoCenas.size() - 1 - k);
+                }
+                
+            }
+            
         }
+        
+        /******* K4 *******/
+        if (b_d.size() > 1) {
+            vector<int> pacote;
+            empacotamento (solucao_parcial, t, cenas, b_d, pacote);
+            
+            if (pacote.size() > 1) {
+                vector<int> custoCenas;
+                custoCenas.resize(pacote.size());
+                
+                // calculando o custo das cenas
+                for (i = 0; i < custoCenas.size(); i++) {
+                    custoCenas[i] = 0;
+                    for(j = 0; j < b_d.size(); j++) {
+                        custoCenas[i] += custos[b_d[j] - 1] * t[b_d[j] - 1][pacote[i] - 1];
+                    }
+                }
+                
+                for (int k = 0; k < custoCenas.size(); k++) {
+                    int menor = k;
+                    for(int i = k+1; i < custoCenas.size(); i++) {
+                        if (custoCenas[i] < custoCenas[menor]) {
+                            menor = i;
+                        }
+                    }
+                    
+                    if (menor != k) {
+                        int aux = custoCenas[k];
+                        custoCenas[k] = custoCenas[menor];
+                        custoCenas[menor] = aux;
+                        aux = pacote[k];
+                        pacote[k] = pacote[menor];
+                        pacote[menor] = aux;
+                    }
+                    
+                    for (int k = custoCenas.size() - 1; k >= 0; k--) {
+                        K4 += custoCenas[k] * (custoCenas.size() - 1 - k);
+                    }
+                }
+            }
+        }
+        
 
 	}
-	return K1 + K2;
+	return K1 + K2 + K3 + K4;
 
 }
 
@@ -345,18 +420,13 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
         
 		/* quantidade de filhos que o no no nivel i pode ter */
 		qtd_filhos = N - no.second.nivel;
-		//cout << qtd_filhos << endl;
 
 		/* se o limitante superior ainda nao foi definido */
 		if(limitante_sup == 1000000) {
 			/* se e um no folha da arvore */
 			if (qtd_filhos == 0) {
-				// cout << "etrei" << endl;
-				vector<int> resposta;
 
-				//for (int j = 0; j < no.second.melhor_solucao.size(); j++)
-				//	cout << no.second.melhor_solucao[j] << " ";
-				//cout << '\n';
+				vector<int> resposta;
 
 				for(i = 0; i < no.second.melhor_solucao.size(); i+= 2) {
 					resposta.push_back(no.second.melhor_solucao[i]);
@@ -364,10 +434,10 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 				for(i = no.second.melhor_solucao.size() -1; i > 0; i -= 2) {
 					resposta.push_back(no.second.melhor_solucao[i]);
 				}
+                
+                melhor_limitante_inf = no.first;
+                limitante_sup = no.first;
 
-				limitante_sup = no.first;
-
-				cout << " Achei limitante_sup " << limitante_sup << endl;
 				atualiza_solucao(resposta, no.first);
 			} else {
 				/* gera os filhos */
@@ -406,8 +476,9 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 				for(i = no.second.melhor_solucao.size() - 1; i > 0; i -= 2) {
 					resposta.push_back(no.second.melhor_solucao[i]);
 				}
-				cout << "limt inf " << no.first << " sup " << limitante_sup << endl;
+				
 					if (no.first < melhor_custo) {
+                       melhor_limitante_inf = no.first;
 						limitante_sup = no.first;
 						atualiza_solucao(resposta, no.first);
 					}
@@ -440,9 +511,6 @@ void b_n_b(int raiz, int N, vector<int>& custos, vector<int>& s, vector<vector<i
 				}
 			}
 		}
-		
-		//cout << endl;
-		
 	}
 }
 
@@ -495,9 +563,9 @@ int main(int argc, char *argv[]) {
 			s[i] += t[i][j];
 		}
 	}
-	for (i = 0; i < atores; i++) {
-		cout << "s " << s[i] << "c " << custos[i] << endl;
-	}
+// 	for (i = 0; i < atores; i++) {
+// 		cout << "s " << s[i] << "c " << custos[i] << endl;
+// 	}
 	b_n_b(0, cenas, custos, s, t, atores, cenas);
 	imprime_saida();
 
