@@ -18,11 +18,14 @@ int melhor_custo;
 struct comparador {
      bool operator()(pair<int, int> i, pair<int, int> j) {
 		 return i.second < j.second;
-    //  return i.second.nivel < j.second.nivel && i.first > j.first;
     }
 } comparador_menor;
-// struct comparador var;
 
+struct comparador_maior {
+	bool operator() (pair<int, int> i,pair<int, int> j) {
+		return i.second > j.second;
+	}
+} comparador_maior;
 void imprime_saida() {
     // Lembre-se: a primeira linha da saida deve conter n inteiros,
     // tais que o j-esimo inteiro indica o dia de gravacao da cena j!
@@ -54,12 +57,83 @@ void interrompe(int signum) {
         exit(0);
     }
 }
+/* Faz uma busca local com base na solucao gulosa-aleatoria encontrada. A busca
+ * local e feita da seguinte forma: pega-se as N/2 cenas com maior numero de
+ * dias de espera. Entao, para cada uma dessas N/2 cenas, troca-se com as outras
+ * cenas restantes para ver se e possivel encontrar uma solucao ainda melhor.
+ * Caso seja possivel atualiza a solucao, se nao continua a heuristica */
+void busca_local(vector<int>& solucao_s, vector<int>& espera_cena, vector<vector<int> >& t, vector<int>& custos, vector<int>& s, int atores) {
+	int qtd = (espera_cena.size()/2);
+	int aux, gravadas, custo;
+	vector<pair<int, int> > piores_cenas;
+	vector<vector<int> > matriz_solucao;
+	vector<int> espera;
+	vector<int> solucao;
+	solucao.resize(solucao_s.size());
 
-vector<int> sol_gulosa_aleatoria(vector<vector<int> >& t, int cenas, int atores, vector<int>& custos, vector<int>& s) {
+	for(int i = 0; i < espera_cena.size(); i++)
+		piores_cenas.push_back(make_pair(i+1, espera_cena[i]));
+	/* ordena as piores cenas em ordem decrescente */
+	sort(piores_cenas.begin(), piores_cenas.end(), comparador_maior);
+
+	/* troca-se as cenas de posicoes, isto e, pega um cena ruim(com nuemro grande
+	 * de dias de espera e troca com uma que nao esta nas N/2 cenas com grande
+	 * numero de dias de espera. */
+	for(int i = 0; i < qtd; i++) {
+		for(int j = 0; j < solucao_s.size(); j++) {
+			if(solucao_s[j] != piores_cenas[i].first) {
+				aux = solucao_s[j];
+				solucao_s[j] = solucao_s[piores_cenas[i].first-1];
+				solucao_s[piores_cenas[i].first-1] = aux;
+				matriz_solucao.resize(atores);
+
+				for(int i = 0; i < atores; i++)
+					matriz_solucao[i].resize(solucao_s.size());
+				/* constroi a matriz com base na nova solucao gerada */
+				for(int i = 0; i < solucao_s.size(); i++) {
+					for(int j = 0; j < atores; j++) {
+						matriz_solucao[j][i] = t[j][solucao_s[i] -1];
+					}
+				}
+				/* conta-se o numero de dias de espera de cada ator */
+				espera.resize(atores);
+				for(int i = 0; i < atores; i++) {
+					gravadas = 0;
+					espera[i] = 0;
+					for(int j = 0; j < solucao_s.size(); j++) {
+						if(matriz_solucao[i][j] == 1) {
+							gravadas++;
+						} else if(gravadas == s[i]) {
+							break;
+						} else if(gravadas != 0) {
+							espera[i]++;
+						}
+					}
+				}
+				custo = 0;
+				/* calcula o custo da nova solucao */
+				for(int i = 0; i < espera.size(); i++) {
+					custo += custos[i] * espera[i];
+				}
+				/* monta a solucao no formato de saida esperado */
+				for(int i = 0; i < solucao_s.size(); i++)
+					solucao[solucao_s[i]-1] = i+1;
+				if (custo <= melhor_custo) {
+					atualiza_solucao(solucao, custo);
+				}
+			}
+		}
+	}
+	return;
+
+}
+
+/* encontra solucao com base em uma escolhe gulosa aleatoria */
+void sol_gulosa_aleatoria(vector<vector<int> >& t, int cenas, int atores, vector<int>& custos, vector<int>& s) {
 	vector<int> solucao_s, chegada, espera_s, espera_cena, saida, cenas_gravadas;
 	/* cena e peso */
 	vector<pair<int, int> > L;
-	int uns, index;
+	int uns, index, gravadas;
 	vector<pair<int, int> >::iterator it;
 	int custo_total = 0;
 	chegada.resize(atores, 0);
@@ -72,29 +146,16 @@ vector<int> sol_gulosa_aleatoria(vector<vector<int> >& t, int cenas, int atores,
 	 * em consideracao a quantiade de numeros 1 em cada cena, que e o peso de cada
 	 * uma, assim quanto menor a quantidade de 1 na cena, menor o peso dela e maior
 	 * a chance dela ser selecionada */
-	// if (!melhor_solucao.size()) {
-	// 	for(int i = 0; i < cenas; i++) {
-	// 		uns = 0;
-	// 		for(int j = 0; j < atores; j++) {
-	// 			if(t[j][i])
-	// 			uns++;
-	// 		}
-	// 		L.push_back(make_pair(i+1,uns));
-	// 	}
-	// } else {
 	for(int i = 0; i < cenas; i++) {
 		uns = 0;
 		for(int j = 0; j < atores; j++) {
 			if(t[j][i])
 				uns++;
-			// if(t[j][melhor_solucao[i]-1])
 		}
 		L.push_back(make_pair(i+1,uns));
-		// L.push_back(make_pair(melhor_solucao[i],uns));
 	}
-	// }
 
-	// shuffle
+	/* embaralha o vetor de cenas */
 	for(int i = L.size() - 1; i > 0; i--) {
   		int j = rand() % i;
   		swap(L[i], L[j]);
@@ -133,19 +194,7 @@ vector<int> sol_gulosa_aleatoria(vector<vector<int> >& t, int cenas, int atores,
 					}
 				}
 			}
-			/* encontrando os dias de espera que cada ator tem na solucao_s */
-			for(int i = 0; i < chegada.size(); i++) {
-				espera_s[i] = 0;
-				if(chegada[i] != 0 && saida[i] != 0) {
-					/* espera_s e por ator */
-					for(int j = chegada[i]; j < saida[i] - chegada[i] +1; j++) {
-						if(t[i][solucao_s[j]-1] == 0)
-							espera_s[i]++;
-						// if(t[i][solucao_s[chegada[i]+j]-1] == 0)
-					}
 
-				}
-			}
 			/* contando quantos dias de espera cada cena em L pode ter caso seja
 			 * a proxima cena selecionada para a solucao parcial */
 			for(int i = 0; i < L.size(); i++) {
@@ -166,53 +215,65 @@ vector<int> sol_gulosa_aleatoria(vector<vector<int> >& t, int cenas, int atores,
 			index = distance(L.begin(), it);
 			solucao_s.push_back(L[index].first);
 			L.erase(it);
-			if (solucao_s.size() == cenas) {
-				for(int i = 0; i < espera_s.size(); i++) {
-					custo_total += custos[i] * espera_s[i];
-				}
-			}
-
-			/* testar cada cena em L quantos dias de espera vai resultar */
-
-			// for(int i = 0; i < L.size(); i++) {
-			// 	for(int j; j < atores; j++) {
-			// 		for(int k = 0; k < solucao_s.size(); k++) {
-			// 			if(t[j][L[i].first -1] == 0 && t[j][solucao_s[k]-1])
-			//
-			// 		}
-			// 	}
-			// }
 		}
 
 	}
+	/* gerando matriz da solucao que foi encontrada para que seja possivel
+	 * calcular a quantidade  de dias de espera de cada ator */
+	vector<vector<int> > matriz_solucao;
+	matriz_solucao.resize(atores);
+	for(int i = 0; i < atores; i++)
+		matriz_solucao[i].resize(cenas);
+	for(int i = 0; i < cenas; i++) {
+		for(int j = 0; j < atores; j++) {
+			matriz_solucao[j][i] = t[j][solucao_s[i] -1];
+		}
+	}
+	/* contando a quantidade de dias de espera de cada ator com base na solucao
+	 * encontrada */
+	espera_cena.clear();
+	espera_cena.resize(cenas, 0);
+	for(int i = 0; i < atores; i++) {
+		gravadas = 0;
+		for(int j = 0; j < cenas; j++) {
+			if(matriz_solucao[i][j] == 1) {
+				gravadas++;
+			} else if(gravadas == s[i]) {
+				break;
+			} else if(gravadas != 0) {
+				espera_s[i]++;
+				espera_cena[j]++;
+			}
+		}
+	}
+	/* calcula o custo total da solucao */
+	for(int i = 0; i < espera_s.size(); i++) {
+		custo_total += custos[i] * espera_s[i];
+	}
+
+	vector<int> solucao;
+	solucao.resize(cenas);
+	/* transformando a solucao encontrada no formato de saida esperado */
+	for(int i = 0; i < solucao_s.size(); i++)
+		solucao[solucao_s[i]-1] = i+1;
+
+	/* ainda nao ha uma melhor solucao encontrada */
 	if(!melhor_solucao.size())
-		atualiza_solucao(solucao_s, custo_total);
+		atualiza_solucao(solucao, custo_total);
 	else {
 		if (custo_total <= melhor_custo)
-			atualiza_solucao(solucao_s, custo_total);
+			atualiza_solucao(solucao, custo_total);
 	}
-	return solucao_s;
+	busca_local(solucao_s, espera_cena, t, custos, s, atores);
+	return;
 }
 
 void grasp(vector<vector<int> >& t, vector<int>& custos, int cenas, int atores, vector<int>& s) {
 	vector<int> solucao_s;
-	int custo_s, nao_atualiza = 0;
+	int custo_s;
 
-	while(nao_atualiza != 10) {
-		solucao_s = sol_gulosa_aleatoria(t, cenas, atores, custos, s);
-		for(int i = 0; i < solucao_s.size(); i++) {
-
-		}
-		// if(!melhor_solucao.size())
-		// 	atualiza_solucao(solucao_s, custo_s);
-		// else
-		// 	if (custo_s <= melhor_custo) {
-		// 		nao_atualiza = 0;
-		// 		atualiza_solucao(solucao_s, custo_s);
-		// 	}
-		// 	else {
-		// 		nao_atualiza++;
-		// 	}
+	while(1) {
+		sol_gulosa_aleatoria(t, cenas, atores, custos, s);
 	}
 	return;
 }
@@ -227,6 +288,7 @@ int main(int argc, char *argv[]) {
     // Registra a funcao que trata o sinal
     signal(SIGINT, interrompe);
 
+	/* lendo entrada */
 	while(getline(entrada, str)) {
 		if(linha == 1) {
 			tmp = str;
@@ -242,7 +304,7 @@ int main(int argc, char *argv[]) {
 			j = 0;
 			for(i = 0; i < atores; i++) {
 				tmp.clear();
-				while(str[j] != ' ') {
+				while(str[j] != ' ' && str[j] != '\0') {
 					tmp = tmp + str[j];
 					j++;
 				}
@@ -259,6 +321,7 @@ int main(int argc, char *argv[]) {
 		linha++;
 	}
 	s.resize(atores);
+	/* calculando a quantidade de cenas que cada ator grava */
 	for (i = 0; i < atores; i++) {
 		s[i] = 0;
 		for(j = 0; j < cenas; j++) {
@@ -266,10 +329,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	grasp(t, custos, cenas, atores, s);
-	// return melhor_solucao;
-    // Continue sua implementacao aqui. Sempre que encontrar uma nova
-    // solucao, utilize a funcao atualiza_solucao para atualizar as
-    // variaveis globais.
 
     return 0;
 }
