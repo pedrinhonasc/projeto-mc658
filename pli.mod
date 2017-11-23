@@ -38,7 +38,6 @@ var deixou_o_set{i in ATORES, j in DIAS}, binary;
 minimize total_espera: (sum{i in ATORES} c[i] * (sum{j in CENAS} esperas[i,j]));
 
 /* ===> restricoes */
-/* R = T * P */
 /* matriz resultante contento as cenas na ordem correta */
 s.t. calendario_gravacao{i in ATORES, j in DIAS}: sum{k in CENAS} (T[i, k] * calendario_cenas[k, j]) = dias_de_gravacao[i,j];
 
@@ -80,7 +79,7 @@ s.t. em_espera{i in ATORES, j in {2..n-1}}: esperas[i,j] = dias_no_set[i,j] - di
 /*s.t. cond{i in ATORES, j in CENAS}: chegou_no_set[i,j] - (1-deixou_o_set[i,j]) >= 0;*/
 
 /* ator nao pode estar em cena e espera ao mesmo tempo */
-/*s.t. emcena{i in ATORES, j in CENAS}: calendario_cenas[i, j] + esperas[i, j] <= 1; */
+/*s.t. emcena{i in ATORES, j in CENAS}: calendario_cenas[i, j] + espera[i, j] <= 1; */
 
 
 /* resolve problema */
